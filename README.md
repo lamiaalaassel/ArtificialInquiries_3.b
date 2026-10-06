@@ -2,14 +2,14 @@
 
 **Artificial Inquiries · Qualifying **
 
+## Fiche de l'exercice (Task Categories)
+<img width="553" height="775" alt="image" src="https://github.com/user-attachments/assets/c2aca22d-012e-4a1b-b12a-6c646512a4be" />
+
+
 ## Description
 
 Cartographie de mes usages d'un LLM à partir de mon historique de conversations, analysé par échantillonnage aléatoire : un dé détermine
 combien de conversations examiner, puis combien ignorer.
-
-
-## Fiche de l'exercice (Task Categories)
-<img width="553" height="775" alt="image" src="https://github.com/user-attachments/assets/c2aca22d-012e-4a1b-b12a-6c646512a4be" />
 
 
 ## Objectifs
