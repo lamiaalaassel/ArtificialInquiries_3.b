@@ -1,4 +1,4 @@
-# Rolling the Dice – Exercice 3b
+# Rolling the Dice – Exercice 3.b
 
 **Artificial Inquiries · Qualifying **
 
@@ -55,6 +55,3 @@ combien de conversations examiner, puis combien ignorer.
 
 **Conversations mémorables** : *à compléter*
 
-## Analyse
-
-*À compléter.*
