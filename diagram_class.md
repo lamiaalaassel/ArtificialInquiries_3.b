@@ -1,3 +1,4 @@
+```mermaid
 classDiagram
     class Historique {
         -conversations
@@ -48,3 +49,4 @@ classDiagram
     Fiche "1" o-- "0..8" ConversationMemorable : garde
     Parcours ..> De : utilise
     Parcours --> Historique : parcourt
+```
