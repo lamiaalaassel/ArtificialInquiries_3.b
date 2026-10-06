@@ -29,6 +29,17 @@ combien de conversations examiner, puis combien ignorer.
 9. Noter les catégories identifiées et leurs occurrences.
 10. Conserver au maximum huit conversations particulièrement mémorables.
 
+## Outils techniques
+
+| Outil | Rôle |
+|---|---|
+| **Python 3** | Exécution du script |
+| **Module `random`** | Simulation du lancer de dé |
+| **Module `json`** | Lecture de l'export des conversations et fichier de suivi |
+| **Export de l'historique du LLM** | Récupération des conversations (`conversations.json`) |
+| **Git / GitHub** | Versionnement et rendu du projet |
+| **Markdown** | Rédaction du README |
+
 ## Solution technique
 
 - Export de l'historique des conversations.
