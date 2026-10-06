@@ -7,6 +7,11 @@
 Cartographie de mes usages d'un LLM à partir de mon historique de conversations, analysé par échantillonnage aléatoire : un dé détermine
 combien de conversations examiner, puis combien ignorer.
 
+
+## Fiche de l'exercice (Task Categories)
+<img width="553" height="775" alt="image" src="https://github.com/user-attachments/assets/c2aca22d-012e-4a1b-b12a-6c646512a4be" />
+
+
 ## Objectifs
 
 - Explorer son historique de conversations avec un LLM.
@@ -33,7 +38,7 @@ combien de conversations examiner, puis combien ignorer.
 
 | Outil | Rôle |
 |---|---|
-| **Python 3** | Exécution du script |
+| **JavaScript** | Exécution du script |
 | **Module `random`** | Simulation du lancer de dé |
 | **Module `json`** | Lecture de l'export des conversations et fichier de suivi |
 | **Export de l'historique du LLM** | Récupération des conversations (`conversations.json`) |
@@ -43,7 +48,7 @@ combien de conversations examiner, puis combien ignorer.
 ## Solution technique
 
 - Export de l'historique des conversations.
-- Script Python simulant le lancer de dé.
+- Script JavaScript simulant le lancer de dé.
 - Fichier de suivi (JSON ou CSV) pour les catégories, les occurrences et les
   conversations mémorables.
 
