@@ -1,0 +1,47 @@
+{
+    "o:label": "Parcours",
+    "o:resource_template_property": [
+        {
+            "o:alternate_label": null,
+            "o:alternate_comment": null,
+            "o:is_required": false,
+            "o:is_private": false,
+            "o:default_lang": null,
+            "data_types": [],
+            "vocabulary_namespace_uri": "https:\/\/humanum-p8.fr\/omk_artificialinquiries\/onto\/artinq#",
+            "vocabulary_label": "Artificial Inquiries",
+            "local_name": "position",
+            "label": "Position"
+        },
+        {
+            "o:alternate_label": null,
+            "o:alternate_comment": null,
+            "o:is_required": false,
+            "o:is_private": false,
+            "o:default_lang": null,
+            "data_types": [],
+            "vocabulary_namespace_uri": "https:\/\/humanum-p8.fr\/omk_artificialinquiries\/onto\/artinq#",
+            "vocabulary_label": "Artificial Inquiries",
+            "local_name": "utiliseDe",
+            "label": "Utilise un d\u00e9"
+        },
+        {
+            "o:alternate_label": null,
+            "o:alternate_comment": null,
+            "o:is_required": false,
+            "o:is_private": false,
+            "o:default_lang": null,
+            "data_types": [],
+            "vocabulary_namespace_uri": "https:\/\/humanum-p8.fr\/omk_artificialinquiries\/onto\/artinq#",
+            "vocabulary_label": "Artificial Inquiries",
+            "local_name": "parcourtHistorique",
+            "label": "Parcourt un historique"
+        }
+    ],
+    "o:resource_class": {
+        "vocabulary_namespace_uri": "https:\/\/humanum-p8.fr\/omk_artificialinquiries\/onto\/artinq#",
+        "vocabulary_label": "Artificial Inquiries",
+        "local_name": "Parcours",
+        "label": "Parcours"
+    }
+}
