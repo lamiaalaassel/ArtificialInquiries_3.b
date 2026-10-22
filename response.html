@@ -1,0 +1,372 @@
+
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Artificial Inquiries</title>
+
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: Arial, sans-serif;
+      margin: 0;
+      background: #f4f6f9;
+      color: #222;
+    }
+
+    header {
+      background: #263b5e;
+      color: white;
+      text-align: center;
+      padding: 25px 15px;
+    }
+
+    main {
+      max-width: 1000px;
+      margin: 30px auto;
+      padding: 20px;
+    }
+
+    .panel {
+      background: white;
+      padding: 22px;
+      margin-bottom: 25px;
+      border-radius: 10px;
+      box-shadow: 0 2px 8px #00000012;
+    }
+
+    label {
+      display: block;
+      margin-top: 15px;
+      font-weight: bold;
+    }
+
+    input, select, textarea {
+      width: 100%;
+      padding: 11px;
+      margin-top: 7px;
+      border: 1px solid #ccc;
+      border-radius: 5px;
+      font-size: 15px;
+    }
+
+    button {
+      padding: 10px 15px;
+      margin-top: 15px;
+      margin-right: 5px;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+      background: #263b5e;
+      color: white;
+    }
+
+    button:hover {
+      opacity: 0.85;
+    }
+
+    .delete {
+      background: #c0392b;
+    }
+
+    .edit {
+      background: #287a57;
+    }
+
+    .cancel {
+      background: #666;
+    }
+
+    .item {
+      border: 1px solid #ddd;
+      border-radius: 6px;
+      padding: 15px;
+      margin-top: 12px;
+      overflow-wrap: anywhere;
+    }
+
+    .item h3 {
+      margin-top: 0;
+    }
+
+    .empty {
+      color: #666;
+    }
+  </style>
+</head>
+
+<body>
+  <header>
+    <h1>Artificial Inquiries</h1>
+    <p>Gestion des données du projet avec Omeka S</p>
+  </header>
+
+  <main>
+    <section class="panel">
+      <h2 id="formTitle">Ajouter un élément</h2>
+
+      <form id="itemForm">
+        <label for="resourceClass">Classe</label>
+        <select id="resourceClass" required>
+          <option value="Catégorie">Catégorie</option>
+          <option value="Conversation">Conversation</option>
+          <option value="Conversation mémorable">
+            Conversation mémorable
+          </option>
+          <option value="Dé">Dé</option>
+          <option value="Fiche">Fiche</option>
+          <option value="Historique">Historique</option>
+          <option value="Parcours">Parcours</option>
+        </select>
+
+        <label for="title">Titre ou nom</label>
+        <input
+          type="text"
+          id="title"
+          placeholder="Ex. : Nutrition"
+          required
+        >
+
+        <label for="description">Description</label>
+        <textarea
+          id="description"
+          rows="3"
+          placeholder="Décris cet élément..."
+        ></textarea>
+
+        <button type="submit" id="submitButton">
+          Ajouter
+        </button>
+
+        <button
+          type="button"
+          id="cancelButton"
+          class="cancel"
+          hidden
+        >
+          Annuler
+        </button>
+      </form>
+    </section>
+
+    <section class="panel">
+      <h2>Liste des éléments</h2>
+
+      <label for="filterClass">Filtrer par classe</label>
+      <select id="filterClass">
+        <option value="Toutes">Toutes les classes</option>
+        <option value="Catégorie">Catégorie</option>
+        <option value="Conversation">Conversation</option>
+        <option value="Conversation mémorable">
+          Conversation mémorable
+        </option>
+        <option value="Dé">Dé</option>
+        <option value="Fiche">Fiche</option>
+        <option value="Historique">Historique</option>
+        <option value="Parcours">Parcours</option>
+      </select>
+
+      <div id="itemList"></div>
+    </section>
+  </main>
+
+  <script>
+    // Données de démonstration
+    let items = [
+      {
+        id: 1,
+        resourceClass: "Catégorie",
+        title: "Nutrition",
+        description: "Catégorie de conversations sur la nutrition."
+      },
+      {
+        id: 2,
+        resourceClass: "Conversation",
+        title: "Discussion sur la nutrition",
+        description: "Une conversation de démonstration."
+      },
+      {
+        id: 3,
+        resourceClass: "Conversation mémorable",
+        title: "Ma découverte de la nutrition",
+        description: "Une conversation à conserver."
+      },
+      {
+        id: 4,
+        resourceClass: "Dé",
+        title: "Dé à six faces",
+        description: "Un dé comportant six faces."
+      },
+      {
+        id: 5,
+        resourceClass: "Fiche",
+        title: "Fiche de synthèse",
+        description: "Une fiche récapitulative."
+      },
+      {
+        id: 6,
+        resourceClass: "Historique",
+        title: "Historique des conversations",
+        description: "La liste des conversations."
+      },
+      {
+        id: 7,
+        resourceClass: "Parcours",
+        title: "Parcours de découverte",
+        description: "Un parcours dans l'historique."
+      }
+    ];
+
+    let editingId = null;
+
+    const form = document.getElementById("itemForm");
+    const resourceClass = document.getElementById("resourceClass");
+    const title = document.getElementById("title");
+    const description = document.getElementById("description");
+    const itemList = document.getElementById("itemList");
+    const filterClass = document.getElementById("filterClass");
+    const formTitle = document.getElementById("formTitle");
+    const submitButton = document.getElementById("submitButton");
+    const cancelButton = document.getElementById("cancelButton");
+
+    // READ : afficher les éléments
+    function displayItems() {
+      itemList.replaceChildren();
+
+      const selectedClass = filterClass.value;
+
+      const filteredItems = items.filter(item =>
+        selectedClass === "Toutes" ||
+        item.resourceClass === selectedClass
+      );
+
+      if (filteredItems.length === 0) {
+        const message = document.createElement("p");
+        message.className = "empty";
+        message.textContent = "Aucun élément à afficher.";
+        itemList.appendChild(message);
+        return;
+      }
+
+      filteredItems.forEach(item => {
+        const card = document.createElement("article");
+        card.className = "item";
+
+        const heading = document.createElement("h3");
+        heading.textContent = item.title;
+
+        const classText = document.createElement("p");
+        classText.textContent = "Classe : " + item.resourceClass;
+
+        const descriptionText = document.createElement("p");
+        descriptionText.textContent =
+          item.description || "Aucune description.";
+
+        const editButton = document.createElement("button");
+        editButton.className = "edit";
+        editButton.textContent = "Modifier";
+        editButton.addEventListener("click", () => editItem(item.id));
+
+        const deleteButton = document.createElement("button");
+        deleteButton.className = "delete";
+        deleteButton.textContent = "Supprimer";
+        deleteButton.addEventListener("click", () => deleteItem(item.id));
+
+        card.append(
+          heading,
+          classText,
+          descriptionText,
+          editButton,
+          deleteButton
+        );
+
+        itemList.appendChild(card);
+      });
+    }
+
+    // CREATE et UPDATE : ajouter ou modifier un élément
+    form.addEventListener("submit", function(event) {
+      event.preventDefault();
+
+      const itemData = {
+        resourceClass: resourceClass.value,
+        title: title.value.trim(),
+        description: description.value.trim()
+      };
+
+      if (!itemData.title) return;
+
+      if (editingId !== null) {
+        const index = items.findIndex(item => item.id === editingId);
+
+        if (index !== -1) {
+          items[index] = { id: editingId, ...itemData };
+        }
+      } else {
+        const newId = items.length
+          ? Math.max(...items.map(item => item.id)) + 1
+          : 1;
+
+        items.push({ id: newId, ...itemData });
+      }
+
+      resetForm();
+      displayItems();
+    });
+
+    // Préparer la modification
+    function editItem(id) {
+      const item = items.find(item => item.id === id);
+
+      if (!item) return;
+
+      editingId = id;
+      resourceClass.value = item.resourceClass;
+      title.value = item.title;
+      description.value = item.description;
+
+      formTitle.textContent = "Modifier un élément";
+      submitButton.textContent = "Enregistrer";
+      cancelButton.hidden = false;
+
+      form.scrollIntoView({ behavior: "smooth" });
+    }
+
+    // DELETE : supprimer un élément
+    function deleteItem(id) {
+      const confirmed = confirm(
+        "Voulez-vous vraiment supprimer cet élément ?"
+      );
+
+      if (!confirmed) return;
+
+      items = items.filter(item => item.id !== id);
+
+      if (editingId === id) {
+        resetForm();
+      }
+
+      displayItems();
+    }
+
+    // Annuler une modification
+    function resetForm() {
+      form.reset();
+      editingId = null;
+      formTitle.textContent = "Ajouter un élément";
+      submitButton.textContent = "Ajouter";
+      cancelButton.hidden = true;
+    }
+
+    cancelButton.addEventListener("click", resetForm);
+    filterClass.addEventListener("change", displayItems);
+
+    // Afficher les éléments au démarrage
+    displayItems();
+  </script>
+</body>
+</html>
