@@ -58,5 +58,16 @@ combien de conversations examiner, puis combien ignorer.
 |-----------|:-----------:|
 |           |             |
 
-**Conversations mémorables** : *à compléter*
+## Démonstration en ligne
+
+**Application de test :** [Ouvrir Artificial Inquiries](https://antenna-clara-fairy-cube.trycloudflare.com/auth.html)
+
+Cette démonstration permet de tester :
+- L'inscription et la connexion des utilisateurs.
+- L'affichage des ressources Omeka S.
+- L'ajout, la modification et la suppression de ressources (CRUD).
+
+**Disponibilité :** démonstration temporaire, accessible uniquement lorsque le serveur local est en fonctionnement.
+
+> Remarque : ce lien est temporaire et sera désactivé à l'arrêt du tunnel.
 
