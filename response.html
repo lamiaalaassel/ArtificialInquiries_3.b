@@ -103,6 +103,11 @@
   <header>
     <h1>Artificial Inquiries</h1>
     <p>Gestion des données du projet avec Omeka S</p>
+    <div id="authBar" style="margin-top:12px">
+      <span id="authStatus">Vérification de la connexion...</span>
+      <button type="button" id="loginLink" hidden>Se connecter</button>
+      <button type="button" id="logoutButton" hidden>Se déconnecter</button>
+    </div>
   </header>
 
   <main>
@@ -114,7 +119,9 @@
         <select id="resourceClass" required>
           <option value="Catégorie">Catégorie</option>
           <option value="Conversation">Conversation</option>
-          <option value="Conversation mémorable">Conversation mémorable</option>
+          <option value="Conversation mémorable">
+            Conversation mémorable
+          </option>
           <option value="Dé">Dé</option>
           <option value="Fiche">Fiche</option>
           <option value="Historique">Historique</option>
@@ -122,17 +129,30 @@
         </select>
 
         <label for="title">Titre ou nom</label>
-        <input type="text" id="title"
-               placeholder="Ex. : Nutrition" required>
+        <input
+          type="text"
+          id="title"
+          placeholder="Ex. : Nutrition"
+          required
+        >
 
         <label for="description">Description</label>
-        <textarea id="description" rows="3"
-                  placeholder="Décris cet élément..."></textarea>
+        <textarea
+          id="description"
+          rows="3"
+          placeholder="Décris cet élément..."
+        ></textarea>
 
-        <button type="submit" id="submitButton">Ajouter</button>
+        <button type="submit" id="submitButton">
+          Ajouter
+        </button>
 
-        <button type="button" id="cancelButton"
-                class="cancel" hidden>
+        <button
+          type="button"
+          id="cancelButton"
+          class="cancel"
+          hidden
+        >
           Annuler
         </button>
       </form>
@@ -146,7 +166,9 @@
         <option value="Toutes">Toutes les classes</option>
         <option value="Catégorie">Catégorie</option>
         <option value="Conversation">Conversation</option>
-        <option value="Conversation mémorable">Conversation mémorable</option>
+        <option value="Conversation mémorable">
+          Conversation mémorable
+        </option>
         <option value="Dé">Dé</option>
         <option value="Fiche">Fiche</option>
         <option value="Historique">Historique</option>
@@ -158,21 +180,20 @@
   </main>
 
   <script>
-    const API_URL = "http://localhost/omeka-proxy.php";
-
+    // Données de démonstration
+    // URL de l'API Omeka S
+const API_URL = "/omeka-proxy.php";    // Les ressources seront chargées depuis Omeka
     let items = [];
     let editingId = null;
-
-    const resourceConfig = {
-      "Catégorie": { classId: 111, templateId: 5 },
-      "Conversation": { classId: 107, templateId: 2 },
-      "Conversation mémorable": { classId: 108, templateId: 3 },
-      "Dé": { classId: 109, templateId: 7 },
-      "Fiche": { classId: 112, templateId: 6 },
-      "Historique": { classId: 106, templateId: 4 },
-      "Parcours": { classId: 110, templateId: 8 }
-    };
-
+const resourceConfig = {
+  "Catégorie": { classId: 111, templateId: 5 },
+  "Conversation": { classId: 107, templateId: 2 },
+  "Conversation mémorable": { classId: 108, templateId: 3 },
+  "Dé": { classId: 109, templateId: 7 },
+  "Fiche": { classId: 112, templateId: 6 },
+  "Historique": { classId: 106, templateId: 4 },
+  "Parcours": { classId: 110, templateId: 8 }
+};
     const form = document.getElementById("itemForm");
     const resourceClass = document.getElementById("resourceClass");
     const title = document.getElementById("title");
@@ -188,6 +209,7 @@
       itemList.replaceChildren();
 
       const selectedClass = filterClass.value;
+
       const filteredItems = items.filter(item =>
         selectedClass === "Toutes" ||
         item.resourceClass === selectedClass
@@ -237,39 +259,55 @@
       });
     }
 
-    // Récupérer les propriétés spécifiques d'une ressource Omeka
-    function getResourceDetails(item) {
-      const ignoredProperties = [
-        "@context", "@id", "@type", "o:id", "o:is_public",
-        "o:owner", "o:resource_class", "o:resource_template",
-        "o:created", "o:modified", "o:item_set", "o:media",
-        "o:primary_media", "o:site", "o:thumbnail", "o:title",
-        "thumbnail_display_urls", "dcterms:title",
-        "dcterms:description"
-      ];
+function getResourceDetails(item) {
+  const ignoredProperties = [
+    "@context",
+    "@id",
+    "@type",
+    "o:id",
+    "o:is_public",
+    "o:owner",
+    "o:resource_class",
+    "o:resource_template",
+    "o:created",
+    "o:modified",
+    "o:item_set",
+    "o:media",
+    "o:primary_media",
+    "o:site",
+    "o:thumbnail",
+    "o:title",
+    "thumbnail_display_urls",
+    "dcterms:title",
+    "dcterms:description"
+  ];
 
-      return Object.entries(item)
-        .filter(([key]) => !ignoredProperties.includes(key))
-        .map(([key, values]) => {
-          if (!Array.isArray(values)) return null;
+  return Object.entries(item)
+    .filter(([key]) => !ignoredProperties.includes(key))
+    .map(([key, values]) => {
+      if (!Array.isArray(values)) return null;
 
-          const text = values
-            .map(value => value["@value"] ?? value["o:label"] ?? "")
-            .filter(Boolean)
-            .join(", ");
-
-          if (!text) return null;
-
-          return `${key.replace("artinq:", "")} : ${text}`;
-        })
+      const text = values
+        .map(value => value["@value"] ?? value["o:label"] ?? "")
         .filter(Boolean)
-        .join(" | ");
-    }
+        .join(", ");
 
-    // READ : charger les ressources depuis Omeka S
+      if (!text) return null;
+
+      const propertyName = key.replace("artinq:", "");
+
+      return `${propertyName} : ${text}`;
+    })
+    .filter(Boolean)
+    .join(" | ");
+}
+
+    // READ : récupérer les ressources depuis Omeka S
     async function loadItems() {
       try {
-        const response = await fetch(`${API_URL}?pretty_print=1`);
+        const response = await fetch(
+          `${API_URL}?pretty_print=1`
+        );
 
         if (!response.ok) {
           throw new Error("Erreur HTTP : " + response.status);
@@ -277,117 +315,128 @@
 
         const data = await response.json();
 
-        const classMapping = {
-          "artinq:Categorie": "Catégorie",
-          "artinq:Conversation": "Conversation",
-          "artinq:ConversationMemorable": "Conversation mémorable",
-          "artinq:De": "Dé",
-          "artinq:Fiche": "Fiche",
-          "artinq:Historique": "Historique",
-          "artinq:Parcours": "Parcours"
-        };
+      items = data.map(item => {
+      const type = item["@type"] || [];
 
-        items = data.map(item => {
-          const types = item["@type"] || [];
-          const typeName = types.find(t => t.startsWith("artinq:"));
+      const classMapping = {
+        "artinq:Categorie": "Catégorie",
+        "artinq:Conversation": "Conversation",
+        "artinq:ConversationMemorable": "Conversation mémorable",
+        "artinq:De": "Dé",
+        "artinq:Fiche": "Fiche",
+        "artinq:Historique": "Historique",
+        "artinq:Parcours": "Parcours"
+      };
 
-          return {
-            id: item["o:id"],
-            resourceClass: classMapping[typeName] || "Non classé",
-            title:
-              item["dcterms:title"]?.[0]?.["@value"] ||
-              item["o:title"] ||
-              "Sans titre",
-            description:
-              item["dcterms:description"]?.[0]?.["@value"] ||
-              getResourceDetails(item) ||
-              "Aucune description."
-          };
-        });
+      const typeName = type.find(t => t.startsWith("artinq:"));
+
+      return {
+        id: item["o:id"],
+        resourceClass: classMapping[typeName] || "Non classé",
+        title:
+          item["dcterms:title"]?.[0]?.["@value"] ||
+          item["o:title"] ||
+          "Sans titre",
+        description:
+          item["dcterms:description"]?.[0]?.["@value"] ||
+          getResourceDetails(item) ||
+          "Aucune description."
+      };
+});
 
         displayItems();
-        console.log("Ressources chargées :", items.length);
+
+        console.log("Ressources chargées depuis Omeka :", items.length);
       } catch (error) {
-        console.error("Erreur Omeka :", error);
+        console.error("Erreur de connexion à Omeka :", error);
+
         itemList.textContent =
-          "Impossible de charger les ressources depuis Omeka S. Vérifiez le serveur et le proxy PHP.";
+          "Impossible de charger les ressources depuis Omeka S.";
       }
     }
 
-    // CREATE et UPDATE : ajouter ou modifier
-    form.addEventListener("submit", async function(event) {
-      event.preventDefault();
 
-      const selectedClass = resourceClass.value;
-      const itemTitle = title.value.trim();
-      const itemDescription = description.value.trim();
-      const config = resourceConfig[selectedClass];
+    
+    // CREATE et UPDATE : ajouter ou modifier un élément
+   
+form.addEventListener("submit", async function(event) {
+  event.preventDefault();
 
-      if (!itemTitle) {
-        alert("Veuillez saisir un titre.");
-        return;
+  const selectedClass = resourceClass.value;
+  const itemTitle = title.value.trim();
+  const itemDescription = description.value.trim();
+  const config = resourceConfig[selectedClass];
+
+  if (!itemTitle) {
+    alert("Veuillez saisir un titre.");
+    return;
+  }
+
+  if (!config) {
+    alert("Classe de ressource inconnue.");
+    return;
+  }
+
+  const itemData = {
+    "o:resource_class": { "o:id": config.classId },
+    "o:resource_template": { "o:id": config.templateId },
+    "dcterms:title": [
+      {
+        type: "literal",
+        property_id: 1,
+        "@value": itemTitle
       }
-
-      if (!config) {
-        alert("Classe de ressource inconnue.");
-        return;
-      }
-
-      const itemData = {
-        "o:resource_class": { "o:id": config.classId },
-        "o:resource_template": { "o:id": config.templateId },
-        "dcterms:title": [{
+    ],
+    "dcterms:description": itemDescription
+      ? [{
           type: "literal",
-          property_id: 1,
-          "@value": itemTitle
-        }],
-        "dcterms:description": itemDescription
-          ? [{
-              type: "literal",
-              property_id: 4,
-              "@value": itemDescription
-            }]
-          : []
-      };
+          property_id: 4,
+          "@value": itemDescription
+        }]
+      : []
+  };
 
-      try {
-        const isEditing = editingId !== null;
+  try {
+    const isEditing = editingId !== null;
 
-        const response = await fetch(
-          isEditing
-            ? `${API_URL}?id=${editingId}`
-            : API_URL,
-          {
-            method: isEditing ? "PATCH" : "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(itemData)
-          }
-        );
-
-        const result = await response.json();
-
-        if (!response.ok) {
-          throw new Error(
-            result["o:message"] || JSON.stringify(result)
-          );
-        }
-
-        alert(isEditing
-          ? "Ressource modifiée avec succès !"
-          : "Ressource ajoutée avec succès !"
-        );
-
-        resetForm();
-        await loadItems();
-      } catch (error) {
-        console.error("Erreur CRUD :", error);
-        alert("Erreur : " + error.message);
+    const response = await fetch(
+      isEditing ? `${API_URL}?id=${editingId}` : API_URL,
+      {
+        method: isEditing ? "PATCH" : "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify(itemData)
       }
-    });
+    );
+
+    const result = await response.json();
+
+    if (!response.ok) {
+      console.error("Erreur Omeka :", result);
+      throw new Error(
+        result["o:message"] || JSON.stringify(result)
+      );
+    }
+
+    alert(isEditing
+      ? "Ressource modifiée avec succès !"
+      : "Ressource ajoutée avec succès !"
+    );
+
+    resetForm();
+    await loadItems();
+
+  } catch (error) {
+    console.error("Erreur CRUD :", error);
+    alert("Erreur : " + error.message);
+  }
+});
 
     // Préparer la modification
     function editItem(id) {
       const item = items.find(item => item.id === id);
+
       if (!item) return;
 
       editingId = id;
@@ -402,35 +451,39 @@
       form.scrollIntoView({ behavior: "smooth" });
     }
 
-    // DELETE : supprimer une ressource
-    async function deleteItem(id) {
-      if (!confirm("Voulez-vous vraiment supprimer cet élément ?")) {
-        return;
-      }
+    // DELETE : supprimer un élément
+    
+async function deleteItem(id) {
+  const confirmed = confirm(
+    "Voulez-vous vraiment supprimer cet élément ?"
+  );
 
-      try {
-        const response = await fetch(`${API_URL}?id=${id}`, {
-          method: "DELETE"
-        });
+  if (!confirmed) return;
 
-        if (!response.ok) {
-          const error = await response.text();
-          throw new Error(error || "Suppression impossible.");
-        }
+  try {
+    const response = await fetch(`${API_URL}?id=${id}`, {
+      method: "DELETE"
+    });
 
-        if (editingId === id) {
-          resetForm();
-        }
-
-        alert("Ressource supprimée avec succès !");
-        await loadItems();
-      } catch (error) {
-        console.error("Erreur de suppression :", error);
-        alert("Erreur : " + error.message);
-      }
+    if (!response.ok) {
+      const error = await response.text();
+      throw new Error(error || "Suppression impossible.");
     }
 
-    // Réinitialiser le formulaire
+    if (editingId === id) {
+      resetForm();
+    }
+
+    alert("Ressource supprimée avec succès !");
+    await loadItems();
+
+  } catch (error) {
+    console.error("Erreur de suppression :", error);
+    alert("Erreur : " + error.message);
+  }
+}
+
+    // Annuler une modification
     function resetForm() {
       form.reset();
       editingId = null;
@@ -442,8 +495,70 @@
     cancelButton.addEventListener("click", resetForm);
     filterClass.addEventListener("change", displayItems);
 
-    // Démarrer directement sans vérifier une connexion utilisateur
-    loadItems();
+    // Authentification locale : le serveur vérifie aussi la session
+    const authStatus = document.getElementById("authStatus");
+    const loginLink = document.getElementById("loginLink");
+    const logoutButton = document.getElementById("logoutButton");
+
+    function setCrudEnabled(enabled) {
+      form.querySelectorAll("input, select, textarea, button")
+        .forEach(element => { element.disabled = !enabled; });
+      filterClass.disabled = !enabled;
+      itemList.querySelectorAll("button").forEach(button => {
+        button.disabled = !enabled;
+      });
+    }
+
+    async function checkAuthentication() {
+      try {
+        const response = await fetch("/auth/check.php", {
+          method: "GET",
+          credentials: "same-origin"
+        });
+        const result = await response.json();
+
+        if (!response.ok || !result.authenticated) {
+          throw new Error("Connexion requise.");
+        }
+
+        authStatus.textContent = "Connecté : " + result.user.name;
+        loginLink.hidden = true;
+        logoutButton.hidden = false;
+        setCrudEnabled(true);
+        await loadItems();
+      } catch (error) {
+        authStatus.textContent = "Veuillez vous connecter pour gérer les ressources.";
+        loginLink.hidden = false;
+        logoutButton.hidden = true;
+        setCrudEnabled(false);
+        itemList.textContent = "Connectez-vous pour afficher les ressources.";
+      }
+    }
+
+    loginLink.addEventListener("click", () => {
+      window.location.href = "/auth.html";
+    });
+
+    logoutButton.addEventListener("click", async () => {
+      try {
+        const response = await fetch("/auth/logout.php", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          credentials: "same-origin",
+          body: JSON.stringify({})
+        });
+        const result = await response.json();
+        if (!response.ok) {
+          throw new Error(result.message || "Déconnexion impossible.");
+        }
+        window.location.href = "/auth.html";
+      } catch (error) {
+        alert(error.message);
+      }
+    });
+
+    setCrudEnabled(false);
+    checkAuthentication();
   </script>
 </body>
 </html>
