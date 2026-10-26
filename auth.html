@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Connexion — Artificial Inquiries</title>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      font-family: Arial, sans-serif; margin: 0; min-height: 100vh;
+      display: flex; justify-content: center; align-items: center;
+      padding: 20px; background: linear-gradient(135deg, #eef2ff, #f4f6f9);
+    }
+    .auth-container {
+      width: 100%; max-width: 420px; background: white; padding: 35px;
+      border-radius: 16px; box-shadow: 0 8px 30px rgba(0,0,0,.09);
+    }
+    .logo { text-align: center; color: #2457c5; font-size: 27px; font-weight: bold; }
+    .subtitle { text-align: center; color: #777; margin-bottom: 30px; font-size: 14px; }
+    h2 { margin-bottom: 8px; color: #222; }
+    .description { color: #777; font-size: 14px; margin-bottom: 25px; }
+    .form-group { margin-bottom: 17px; }
+    label { display: block; margin-bottom: 7px; font-size: 14px; color: #333; }
+    input {
+      width: 100%; padding: 12px; border: 1px solid #d5d9e2;
+      border-radius: 7px; font-size: 14px; outline: none;
+    }
+    input:focus { border-color: #2457c5; box-shadow: 0 0 0 3px rgba(36,87,197,.1); }
+    .main-button {
+      width: 100%; padding: 13px; background: #2457c5; color: white;
+      border: 0; border-radius: 7px; font-size: 15px; font-weight: bold;
+      cursor: pointer; margin-top: 5px;
+    }
+    .main-button:hover { background: #1945a5; }
+    .switch-text { text-align: center; font-size: 14px; color: #666; margin-top: 24px; }
+    .switch-button {
+      border: 0; background: none; color: #2457c5; font-weight: bold;
+      cursor: pointer; font-size: 14px;
+    }
+    .switch-button:hover { text-decoration: underline; }
+    #message { margin-top: 18px; font-size: 14px; text-align: center; overflow-wrap: anywhere; }
+    [hidden] { display: none !important; }
+    button:disabled { opacity: .6; cursor: wait; }
+  </style>
+</head>
+<body>
+  <main class="auth-container">
+    <div class="logo">Artificial Inquiries</div>
+    <p class="subtitle">Votre espace de gestion des ressources</p>
+
+    <section id="loginSection">
+      <h2>Bon retour !</h2>
+      <p class="description">Connectez-vous à votre compte.</p>
+      <form id="loginForm">
+        <div class="form-group">
+          <label for="loginEmail">Adresse e-mail</label>
+          <input id="loginEmail" name="email" type="email" placeholder="exemple@email.com" autocomplete="email" required>
+        </div>
+        <div class="form-group">
+          <label for="loginPassword">Mot de passe</label>
+          <input id="loginPassword" name="password" type="password" placeholder="Votre mot de passe" autocomplete="current-password" required>
+        </div>
+        <button class="main-button" type="submit">Se connecter</button>
+      </form>
+      <p class="switch-text">Pas encore de compte ?
+        <button class="switch-button" id="showRegister" type="button">S'inscrire</button>
+      </p>
+    </section>
+
+    <section id="registerSection" hidden>
+      <h2>Créer un compte</h2>
+      <p class="description">Inscrivez-vous pour accéder à votre espace.</p>
+      <form id="registerForm">
+        <div class="form-group">
+          <label for="registerName">Nom complet</label>
+          <input id="registerName" name="name" type="text" placeholder="Votre nom" autocomplete="name" required>
+        </div>
+        <div class="form-group">
+          <label for="registerEmail">Adresse e-mail</label>
+          <input id="registerEmail" name="email" type="email" placeholder="exemple@email.com" autocomplete="email" required>
+        </div>
+        <div class="form-group">
+          <label for="registerPassword">Mot de passe</label>
+          <input id="registerPassword" name="password" type="password" placeholder="8 caractères minimum" minlength="8" autocomplete="new-password" required>
+        </div>
+        <button class="main-button" type="submit">Créer mon compte</button>
+      </form>
+      <p class="switch-text">Vous avez déjà un compte ?
+        <button class="switch-button" id="showLogin" type="button">Se connecter</button>
+      </p>
+    </section>
+    <p id="message" role="status" aria-live="polite"></p>
+  </main>
+
+  <script>
+    const message = document.getElementById("message");
+    const loginSection = document.getElementById("loginSection");
+    const registerSection = document.getElementById("registerSection");
+
+    function showLogin() {
+      loginSection.hidden = false;
+      registerSection.hidden = true;
+      message.textContent = "";
+      document.title = "Connexion — Artificial Inquiries";
+    }
+    function showRegister() {
+      loginSection.hidden = true;
+      registerSection.hidden = false;
+      message.textContent = "";
+      document.title = "Inscription — Artificial Inquiries";
+    }
+    document.getElementById("showRegister").addEventListener("click", showRegister);
+    document.getElementById("showLogin").addEventListener("click", showLogin);
+
+    async function sendRequest(endpoint, data, method = "POST") {
+const response = await fetch(`/auth/${endpoint}.php`, {        method,
+        headers: { "Content-Type": "application/json" },
+        credentials: "same-origin",
+        ...(data ? { body: JSON.stringify(data) } : {})
+      });
+      const result = await response.json();
+      if (!response.ok) {
+        throw new Error(result.message || result.error || "Une erreur est survenue.");
+      }
+      return result;
+    }
+    function formData(form) {
+      return Object.fromEntries(new FormData(form).entries());
+    }
+
+    document.getElementById("registerForm").addEventListener("submit", async event => {
+      event.preventDefault();
+      const button = event.submitter;
+      button.disabled = true;
+      message.textContent = "Création du compte en cours...";
+      try {
+        const result = await sendRequest("register", formData(event.target));
+        event.target.reset();
+        showLogin();
+        message.textContent = (result.message || "Compte créé.") + " Vous pouvez maintenant vous connecter.";
+      } catch (error) {
+        message.textContent = error.message;
+      } finally {
+        button.disabled = false;
+      }
+    });
+
+    document.getElementById("loginForm").addEventListener("submit", async event => {
+      event.preventDefault();
+      const button = event.submitter;
+      button.disabled = true;
+      message.textContent = "Connexion en cours...";
+      try {
+        const result = await sendRequest("login", formData(event.target));
+        message.textContent = `Bienvenue ${result.user.name} ! Redirection...`;
+        window.location.href = "/response.html";
+      } catch (error) {
+        message.textContent = error.message;
+      } finally {
+        button.disabled = false;
+      }
+    });
+  </script>
+</body>
+</html>
