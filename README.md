@@ -69,5 +69,3 @@ Cette démonstration permet de tester :
 
 **Disponibilité :** démonstration temporaire, accessible uniquement lorsque le serveur local est en fonctionnement.
 
-> Remarque : ce lien est temporaire et sera désactivé à l'arrêt du tunnel.
-
