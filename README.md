@@ -60,7 +60,7 @@ combien de conversations examiner, puis combien ignorer.
 
 ## Démonstration en ligne
 
-**Application de test :** [Ouvrir Artificial Inquiries](https://antenna-clara-fairy-cube.trycloudflare.com/auth.html)
+**Application de test :** [Ouvrir Artificial Inquiries](https://temporarily-ira-jill-com.trycloudflare.com/auth.html)
 
 Cette démonstration permet de tester :
 - L'inscription et la connexion des utilisateurs.
