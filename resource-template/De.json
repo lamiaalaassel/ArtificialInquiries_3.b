@@ -1,5 +1,5 @@
 {
-    "o:label": "De",
+    "o:label": "D\u00e9",
     "o:resource_template_property": [
         {
             "o:alternate_label": null,
@@ -11,7 +11,7 @@
             "vocabulary_namespace_uri": "https:\/\/humanum-p8.fr\/omk_artificialinquiries\/onto\/artinq#",
             "vocabulary_label": "Artificial Inquiries",
             "local_name": "faces",
-            "label": "Faces"
+            "label": "faces"
         }
     ],
     "o:resource_class": {
