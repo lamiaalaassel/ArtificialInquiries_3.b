@@ -4,6 +4,14 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Artificial Inquiries</title>
+  <script>
+    // Sur GitHub Pages : redirection vers la page hébergée sur alwaysdata.
+    // Sur alwaysdata : la page s'affiche normalement (pas de boucle).
+    const ALWAYSDATA_URL = "https://TON-NOM.alwaysdata.net/response.html";
+    if (location.hostname.endsWith("github.io")) {
+      location.replace(ALWAYSDATA_URL);
+    }
+  </script>
   <style>
     * { box-sizing: border-box; }
     body { font-family: Arial, sans-serif; margin: 0; background: #f4f6f9; color: #222; }
