@@ -1,5 +1,5 @@
 {
-    "o:label": "Categorie",
+    "o:label": "Cat\u00e9gorie de t\u00e2che",
     "o:resource_template_property": [
         {
             "o:alternate_label": null,
@@ -11,7 +11,7 @@
             "vocabulary_namespace_uri": "https:\/\/humanum-p8.fr\/omk_artificialinquiries\/onto\/artinq#",
             "vocabulary_label": "Artificial Inquiries",
             "local_name": "nom",
-            "label": "Nom"
+            "label": "nom"
         },
         {
             "o:alternate_label": null,
@@ -23,13 +23,13 @@
             "vocabulary_namespace_uri": "https:\/\/humanum-p8.fr\/omk_artificialinquiries\/onto\/artinq#",
             "vocabulary_label": "Artificial Inquiries",
             "local_name": "occurrences",
-            "label": "Occurrences"
+            "label": "occurrences"
         }
     ],
     "o:resource_class": {
         "vocabulary_namespace_uri": "https:\/\/humanum-p8.fr\/omk_artificialinquiries\/onto\/artinq#",
         "vocabulary_label": "Artificial Inquiries",
-        "local_name": "Categorie",
-        "label": "Cat\u00e9gorie"
+        "local_name": "CategorieTache",
+        "label": "Cat\u00e9gorie de t\u00e2che"
     }
 }
