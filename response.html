@@ -4,7 +4,6 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Artificial Inquiries</title>
-
   <style>
     * { box-sizing: border-box; }
     body { font-family: Arial, sans-serif; margin: 0; background: #f4f6f9; color: #222; }
@@ -15,30 +14,41 @@
     input, select, textarea { width: 100%; padding: 11px; margin-top: 7px; border: 1px solid #ccc; border-radius: 5px; font-size: 15px; }
     button { padding: 10px 15px; margin-top: 15px; margin-right: 5px; border: none; border-radius: 5px; cursor: pointer; background: #263b5e; color: white; }
     button:hover { opacity: 0.85; }
+    button:disabled { opacity: 0.5; cursor: not-allowed; }
     .delete { background: #c0392b; }
     .edit { background: #287a57; }
     .cancel { background: #666; }
     .item { border: 1px solid #ddd; border-radius: 6px; padding: 15px; margin-top: 12px; overflow-wrap: anywhere; }
     .item h3 { margin-top: 0; }
-    .empty { color: #666; }
+    .empty, .hint { color: #666; font-size: 14px; }
+    #status { margin-top: 12px; font-size: 14px; }
+    .ok { color: #1e7a46; } .err { color: #b3261e; }
   </style>
 </head>
-
 <body>
   <header>
     <h1>Artificial Inquiries</h1>
     <p>Gestion des données du projet avec Omeka S (base commune)</p>
-    <div id="authBar" style="margin-top:12px">
-      <span id="authStatus">Vérification de la connexion...</span>
-      <button type="button" id="loginLink" hidden>Se connecter</button>
-      <button type="button" id="logoutButton" hidden>Se déconnecter</button>
-    </div>
   </header>
 
   <main>
+    <section class="panel" id="connectPanel">
+      <h2>Connexion à Omeka S</h2>
+      <p class="hint">
+        Clés d'API à créer dans Omeka S : votre profil, puis « API keys ».
+        Elles restent dans votre navigateur (session) et ne sont jamais enregistrées dans le code.
+      </p>
+      <label for="keyIdentity">Identité de la clé (key_identity)</label>
+      <input type="text" id="keyIdentity" autocomplete="off">
+      <label for="keyCredential">Crédential de la clé (key_credential)</label>
+      <input type="password" id="keyCredential" autocomplete="off">
+      <button type="button" id="connectButton">Se connecter</button>
+      <button type="button" id="disconnectButton" class="cancel" hidden>Se déconnecter</button>
+      <p id="status" role="status"></p>
+    </section>
+
     <section class="panel">
       <h2 id="formTitle">Ajouter un élément</h2>
-
       <form id="itemForm">
         <label for="resourceClass">Classe</label>
         <select id="resourceClass" required></select>
@@ -56,242 +66,237 @@
 
     <section class="panel">
       <h2>Liste des éléments</h2>
-
       <label for="filterClass">Filtrer par classe</label>
       <select id="filterClass"></select>
-
       <div id="itemList"></div>
     </section>
   </main>
 
   <script>
-    // URL du proxy PHP vers l'API Omeka S de la base commune
-    const API_URL = "/omeka-proxy.php";
+    // API Omeka S de la base commune (appel direct, sans PHP)
+    const API = "https://humanum-p8.fr/omk_artificialinquiries/api";
 
-    // ------------------------------------------------------------------
-    // CONFIGURATION : classes et modèles de la BASE COMMUNE
-    // type       = terme du vocabulaire commun (préfixe artinq:)
-    // classId    = ID de la classe dans la base commune   (À REMPLIR)
-    // templateId = ID du resource template importé        (À REMPLIR)
-    // ------------------------------------------------------------------
+    // type = terme du vocabulaire commun ; templateLabel = nom exact du resource template importé
+    // classId et templateId sont retrouvés automatiquement à la connexion
     const resourceConfig = {
-      "Catégorie de tâche":         { type: "artinq:CategorieTache",        classId: null, templateId: null },
-      "Conversation":               { type: "artinq:Conversation",          classId: null, templateId: null },
-      "Conversation marquante":     { type: "artinq:ConversationMarquante",  classId: null, templateId: null },
-      "Dé":                         { type: "artinq:De",                     classId: null, templateId: null },
-      "Historique de conversations":{ type: "artinq:Historique",             classId: null, templateId: null },
-      "Passation":                  { type: "artinq:Passation",              classId: null, templateId: null }
+      "Catégorie de tâche":          { type: "artinq:CategorieTache",       templateLabel: "Catégorie de tâche" },
+      "Conversation":                { type: "artinq:Conversation",         templateLabel: "Conversation" },
+      "Conversation marquante":      { type: "artinq:ConversationMarquante", templateLabel: "Conversation marquante" },
+      "Dé":                          { type: "artinq:De",                   templateLabel: "Dé" },
+      "Historique de conversations": { type: "artinq:Historique",           templateLabel: "Historique de conversations" },
+      "Passation":                   { type: "artinq:Passation",            templateLabel: "Artificial Inquiries – Passation" }
     };
-
-    // Correspondance type Omeka -> libellé affiché
-    const classMapping = Object.fromEntries(
-      Object.entries(resourceConfig).map(([label, cfg]) => [cfg.type, label])
-    );
 
     let items = [];
     let editingId = null;
+    let connected = false;
 
-    const form = document.getElementById("itemForm");
-    const resourceClass = document.getElementById("resourceClass");
-    const title = document.getElementById("title");
-    const description = document.getElementById("description");
-    const itemList = document.getElementById("itemList");
-    const filterClass = document.getElementById("filterClass");
-    const formTitle = document.getElementById("formTitle");
-    const submitButton = document.getElementById("submitButton");
-    const cancelButton = document.getElementById("cancelButton");
+    const $ = id => document.getElementById(id);
+    const form = $("itemForm"), resourceClass = $("resourceClass"), title = $("title"),
+          description = $("description"), itemList = $("itemList"), filterClass = $("filterClass"),
+          formTitle = $("formTitle"), submitButton = $("submitButton"), cancelButton = $("cancelButton"),
+          statusEl = $("status"), connectButton = $("connectButton"), disconnectButton = $("disconnectButton"),
+          keyIdentity = $("keyIdentity"), keyCredential = $("keyCredential");
 
-    // Remplir les listes déroulantes à partir de la configuration
+    const authQuery = () =>
+      `key_identity=${encodeURIComponent(keyIdentity.value.trim())}&key_credential=${encodeURIComponent(keyCredential.value.trim())}`;
+
+    function setStatus(text, ok) {
+      statusEl.textContent = text;
+      statusEl.className = ok === undefined ? "" : (ok ? "ok" : "err");
+    }
+
+    function friendlyError(error) {
+      if (error instanceof TypeError) {
+        return "Impossible de joindre Omeka S (probablement le CORS : le serveur doit autoriser ce site). Voir la console (F12).";
+      }
+      return error.message;
+    }
+
+    function setCrudEnabled(enabled) {
+      form.querySelectorAll("input, select, textarea, button").forEach(el => { el.disabled = !enabled; });
+      filterClass.disabled = !enabled;
+      itemList.querySelectorAll("button").forEach(b => { b.disabled = !enabled; });
+    }
+
     function fillSelects() {
       const labels = Object.keys(resourceConfig);
       resourceClass.replaceChildren(...labels.map(l => new Option(l, l)));
-      filterClass.replaceChildren(
-        new Option("Toutes les classes", "Toutes"),
-        ...labels.map(l => new Option(l, l))
-      );
+      filterClass.replaceChildren(new Option("Toutes les classes", "Toutes"), ...labels.map(l => new Option(l, l)));
     }
 
-    // READ : afficher les éléments
+    // Retrouver les IDs de classes et de modèles dans la base commune
+    async function resolveIds() {
+      for (const [label, cfg] of Object.entries(resourceConfig)) {
+        const r = await fetch(`${API}/resource_classes?term=${encodeURIComponent(cfg.type)}`);
+        if (!r.ok) throw new Error("Lecture des classes impossible (HTTP " + r.status + ").");
+        const data = await r.json();
+        if (!data.length) throw new Error("Classe introuvable dans la base commune : " + cfg.type);
+        cfg.classId = data[0]["o:id"];
+      }
+      const t = await fetch(`${API}/resource_templates?per_page=200&${authQuery()}`);
+      if (!t.ok) throw new Error("Lecture des modèles impossible (HTTP " + t.status + "). Vérifiez vos clés.");
+      const templates = await t.json();
+      for (const cfg of Object.values(resourceConfig)) {
+        const found = templates.find(x => x["o:label"] === cfg.templateLabel);
+        cfg.templateId = found ? found["o:id"] : null;
+      }
+    }
+
     function displayItems() {
       itemList.replaceChildren();
-      const selectedClass = filterClass.value;
+      const selected = filterClass.value;
+      const filtered = items.filter(i => selected === "Toutes" || i.resourceClass === selected);
 
-      const filteredItems = items.filter(item =>
-        selectedClass === "Toutes" || item.resourceClass === selectedClass
-      );
-
-      if (filteredItems.length === 0) {
-        const message = document.createElement("p");
-        message.className = "empty";
-        message.textContent = "Aucun élément à afficher.";
-        itemList.appendChild(message);
+      if (!filtered.length) {
+        const p = document.createElement("p");
+        p.className = "empty";
+        p.textContent = "Aucun élément à afficher.";
+        itemList.appendChild(p);
         return;
       }
 
-      filteredItems.forEach(item => {
+      filtered.forEach(item => {
         const card = document.createElement("article");
         card.className = "item";
-
-        const heading = document.createElement("h3");
-        heading.textContent = item.title;
-
-        const classText = document.createElement("p");
-        classText.textContent = "Classe : " + item.resourceClass;
-
-        const descriptionText = document.createElement("p");
-        descriptionText.textContent = item.displayDescription || "Aucune description.";
-
-        const editButton = document.createElement("button");
-        editButton.className = "edit";
-        editButton.textContent = "Modifier";
-        editButton.addEventListener("click", () => editItem(item.id));
-
-        const deleteButton = document.createElement("button");
-        deleteButton.className = "delete";
-        deleteButton.textContent = "Supprimer";
-        deleteButton.addEventListener("click", () => deleteItem(item.id));
-
-        card.append(heading, classText, descriptionText, editButton, deleteButton);
+        const h = document.createElement("h3"); h.textContent = item.title;
+        const c = document.createElement("p"); c.textContent = "Classe : " + item.resourceClass;
+        const d = document.createElement("p"); d.textContent = item.displayDescription || "Aucune description.";
+        const e = document.createElement("button"); e.className = "edit"; e.textContent = "Modifier";
+        e.addEventListener("click", () => editItem(item.id));
+        const x = document.createElement("button"); x.className = "delete"; x.textContent = "Supprimer";
+        x.addEventListener("click", () => deleteItem(item.id));
+        card.append(h, c, d, e, x);
         itemList.appendChild(card);
       });
     }
 
-    // Affiche les propriétés artinq: d'un item (vocabulaire commun)
     function getResourceDetails(item) {
       return Object.entries(item)
-        .filter(([key]) => key.startsWith("artinq:"))
-        .map(([key, values]) => {
+        .filter(([k]) => k.startsWith("artinq:"))
+        .map(([k, values]) => {
           if (!Array.isArray(values)) return null;
-          const text = values
-            .map(v => v["@value"] ?? v["o:label"] ?? v["display_title"] ?? "")
-            .filter(Boolean)
-            .join(", ");
-          return text ? `${key.replace("artinq:", "")} : ${text}` : null;
-        })
-        .filter(Boolean)
-        .join(" | ");
+          const text = values.map(v => v["@value"] ?? v["o:label"] ?? v["display_title"] ?? "").filter(Boolean).join(", ");
+          return text ? `${k.replace("artinq:", "")} : ${text}` : null;
+        }).filter(Boolean).join(" | ");
     }
 
-    // READ : récupérer les ressources depuis la base commune
     async function loadItems() {
-      try {
-        const response = await fetch(`${API_URL}?pretty_print=1&per_page=100`);
-        if (!response.ok) throw new Error("Erreur HTTP : " + response.status);
+      const classQuery = Object.values(resourceConfig)
+        .map(cfg => `resource_class_id[]=${cfg.classId}`).join("&");
+      const r = await fetch(`${API}/items?per_page=100&${classQuery}&${authQuery()}`);
+      if (!r.ok) throw new Error("Lecture des items impossible (HTTP " + r.status + ").");
+      const data = await r.json();
 
-        const data = await response.json();
-
-        items = data
-          .map(item => {
-            const type = item["@type"] || [];
-            const typeName = type.find(t => classMapping[t]);
-            const rawDescription = item["dcterms:description"]?.[0]?.["@value"] || "";
-
-            return {
-              id: item["o:id"],
-              resourceClass: typeName ? classMapping[typeName] : null,
-              title:
-                item["dcterms:title"]?.[0]?.["@value"] ||
-                item["o:title"] ||
-                "Sans titre",
-              rawDescription,
-              displayDescription: rawDescription || getResourceDetails(item)
-            };
-          })
-          // On ne garde que les classes gérées par cette IHM
-          .filter(item => item.resourceClass !== null);
-
-        displayItems();
-        console.log("Ressources chargées depuis la base commune :", items.length);
-      } catch (error) {
-        console.error("Erreur de connexion à Omeka :", error);
-        itemList.textContent = "Impossible de charger les ressources depuis Omeka S.";
-      }
+      const byType = Object.fromEntries(Object.entries(resourceConfig).map(([label, cfg]) => [cfg.type, label]));
+      items = data.map(item => {
+        const typeName = (item["@type"] || []).find(t => byType[t]);
+        const rawDescription = item["dcterms:description"]?.[0]?.["@value"] || "";
+        return {
+          id: item["o:id"],
+          resourceClass: typeName ? byType[typeName] : null,
+          title: item["dcterms:title"]?.[0]?.["@value"] || item["o:title"] || "Sans titre",
+          rawDescription,
+          displayDescription: rawDescription || getResourceDetails(item)
+        };
+      }).filter(i => i.resourceClass !== null);
+      displayItems();
     }
 
-    // CREATE et UPDATE
-    form.addEventListener("submit", async function (event) {
-      event.preventDefault();
-
-      const selectedClass = resourceClass.value;
-      const itemTitle = title.value.trim();
-      const itemDescription = description.value.trim();
-      const config = resourceConfig[selectedClass];
-
-      if (!itemTitle) { alert("Veuillez saisir un titre."); return; }
-      if (!config) { alert("Classe de ressource inconnue."); return; }
-      if (!config.classId || !config.templateId) {
-        alert("IDs de classe/modèle non renseignés pour « " + selectedClass +
-              " ». Complétez resourceConfig avec les IDs de la base commune.");
+    async function connect() {
+      if (!keyIdentity.value.trim() || !keyCredential.value.trim()) {
+        setStatus("Renseignez la clé d'API (identité et crédential).", false);
         return;
       }
+      setStatus("Connexion en cours...");
+      try {
+        await resolveIds();
+        await loadItems();
+        sessionStorage.setItem("omekaKeyIdentity", keyIdentity.value.trim());
+        sessionStorage.setItem("omekaKeyCredential", keyCredential.value.trim());
+        connected = true;
+        connectButton.hidden = true;
+        disconnectButton.hidden = false;
+        keyIdentity.disabled = keyCredential.disabled = true;
+        setStatus("Connecté à la base commune.", true);
+        setCrudEnabled(true);
+      } catch (error) {
+        console.error(error);
+        setStatus(friendlyError(error), false);
+      }
+    }
 
-      const itemData = {
-        "o:resource_class": { "o:id": config.classId },
-        "o:resource_template": { "o:id": config.templateId },
+    function disconnect() {
+      sessionStorage.clear();
+      connected = false;
+      keyIdentity.value = keyCredential.value = "";
+      keyIdentity.disabled = keyCredential.disabled = false;
+      connectButton.hidden = false;
+      disconnectButton.hidden = true;
+      items = [];
+      itemList.textContent = "Connectez-vous pour afficher les ressources.";
+      setCrudEnabled(false);
+      setStatus("Déconnecté.");
+    }
+
+    form.addEventListener("submit", async event => {
+      event.preventDefault();
+      const cfg = resourceConfig[resourceClass.value];
+      const itemTitle = title.value.trim();
+      const itemDescription = description.value.trim();
+      if (!itemTitle) { alert("Veuillez saisir un titre."); return; }
+
+      const body = {
+        "o:resource_class": { "o:id": cfg.classId },
         "dcterms:title": [{ type: "literal", property_id: 1, "@value": itemTitle }],
         "dcterms:description": itemDescription
-          ? [{ type: "literal", property_id: 4, "@value": itemDescription }]
-          : []
+          ? [{ type: "literal", property_id: 4, "@value": itemDescription }] : []
       };
+      if (cfg.templateId) body["o:resource_template"] = { "o:id": cfg.templateId };
 
       try {
         const isEditing = editingId !== null;
-        const response = await fetch(
-          isEditing ? `${API_URL}?id=${editingId}` : API_URL,
-          {
-            method: isEditing ? "PATCH" : "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(itemData)
-          }
-        );
-
-        const result = await response.json();
-        if (!response.ok) {
-          console.error("Erreur Omeka :", result);
-          throw new Error(result["o:message"] || JSON.stringify(result));
-        }
-
+        const url = isEditing ? `${API}/items/${editingId}?${authQuery()}` : `${API}/items?${authQuery()}`;
+        const r = await fetch(url, {
+          method: isEditing ? "PATCH" : "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(body)
+        });
+        const result = await r.json().catch(() => ({}));
+        if (!r.ok) throw new Error(JSON.stringify(result.errors || result));
         alert(isEditing ? "Ressource modifiée avec succès !" : "Ressource ajoutée avec succès !");
         resetForm();
         await loadItems();
       } catch (error) {
-        console.error("Erreur CRUD :", error);
-        alert("Erreur : " + error.message);
+        console.error(error);
+        alert("Erreur : " + friendlyError(error));
       }
     });
 
-    // Préparer la modification
     function editItem(id) {
       const item = items.find(i => i.id === id);
       if (!item) return;
-
       editingId = id;
       resourceClass.value = item.resourceClass;
       title.value = item.title;
-      description.value = item.rawDescription; // vraie description, pas le résumé des propriétés
-
+      description.value = item.rawDescription;
       formTitle.textContent = "Modifier un élément";
       submitButton.textContent = "Enregistrer";
       cancelButton.hidden = false;
       form.scrollIntoView({ behavior: "smooth" });
     }
 
-    // DELETE
     async function deleteItem(id) {
       if (!confirm("Voulez-vous vraiment supprimer cet élément ?")) return;
-
       try {
-        const response = await fetch(`${API_URL}?id=${id}`, { method: "DELETE" });
-        if (!response.ok) {
-          const error = await response.text();
-          throw new Error(error || "Suppression impossible.");
-        }
+        const r = await fetch(`${API}/items/${id}?${authQuery()}`, { method: "DELETE" });
+        if (!r.ok) throw new Error("Suppression impossible (HTTP " + r.status + ").");
         if (editingId === id) resetForm();
         alert("Ressource supprimée avec succès !");
         await loadItems();
       } catch (error) {
-        console.error("Erreur de suppression :", error);
-        alert("Erreur : " + error.message);
+        console.error(error);
+        alert("Erreur : " + friendlyError(error));
       }
     }
 
@@ -303,62 +308,23 @@
       cancelButton.hidden = true;
     }
 
+    connectButton.addEventListener("click", connect);
+    disconnectButton.addEventListener("click", disconnect);
     cancelButton.addEventListener("click", resetForm);
     filterClass.addEventListener("change", displayItems);
 
-    // Authentification locale : le serveur vérifie aussi la session
-    const authStatus = document.getElementById("authStatus");
-    const loginLink = document.getElementById("loginLink");
-    const logoutButton = document.getElementById("logoutButton");
-
-    function setCrudEnabled(enabled) {
-      form.querySelectorAll("input, select, textarea, button")
-        .forEach(el => { el.disabled = !enabled; });
-      filterClass.disabled = !enabled;
-      itemList.querySelectorAll("button").forEach(b => { b.disabled = !enabled; });
-    }
-
-    async function checkAuthentication() {
-      try {
-        const response = await fetch("/auth/check.php", { method: "GET", credentials: "same-origin" });
-        const result = await response.json();
-        if (!response.ok || !result.authenticated) throw new Error("Connexion requise.");
-
-        authStatus.textContent = "Connecté : " + result.user.name;
-        loginLink.hidden = true;
-        logoutButton.hidden = false;
-        setCrudEnabled(true);
-        await loadItems();
-      } catch (error) {
-        authStatus.textContent = "Veuillez vous connecter pour gérer les ressources.";
-        loginLink.hidden = false;
-        logoutButton.hidden = true;
-        setCrudEnabled(false);
-        itemList.textContent = "Connectez-vous pour afficher les ressources.";
-      }
-    }
-
-    loginLink.addEventListener("click", () => { window.location.href = "/auth.html"; });
-
-    logoutButton.addEventListener("click", async () => {
-      try {
-        const response = await fetch("/auth/logout.php", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          credentials: "same-origin",
-          body: JSON.stringify({})
-        });
-        const result = await response.json();
-        if (!response.ok) throw new Error(result.message || "Déconnexion impossible.");
-        window.location.href = "/auth.html";
-      } catch (error) {
-        alert(error.message);
-      }
-    });
-
     fillSelects();
     setCrudEnabled(false);
-    checkAuthentication();
+    itemList.textContent = "Connectez-vous pour afficher les ressources.";
+
+    // Reconnexion automatique si la session contient déjà les clés
+    const savedId = sessionStorage.getItem("omekaKeyIdentity");
+    const savedCred = sessionStorage.getItem("omekaKeyCredential");
+    if (savedId && savedCred) {
+      keyIdentity.value = savedId;
+      keyCredential.value = savedCred;
+      connect();
+    }
   </script>
 </body>
 </html>
