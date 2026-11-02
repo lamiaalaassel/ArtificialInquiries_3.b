@@ -1,5 +1,5 @@
 {
-    "o:label": "Historique",
+    "o:label": "Historique de conversations",
     "o:resource_template_property": [
         {
             "o:alternate_label": null,
@@ -10,14 +10,14 @@
             "data_types": [],
             "vocabulary_namespace_uri": "https:\/\/humanum-p8.fr\/omk_artificialinquiries\/onto\/artinq#",
             "vocabulary_label": "Artificial Inquiries",
-            "local_name": "conversations",
-            "label": "Conversations"
+            "local_name": "aPourConversation",
+            "label": "a pour conversation"
         }
     ],
     "o:resource_class": {
         "vocabulary_namespace_uri": "https:\/\/humanum-p8.fr\/omk_artificialinquiries\/onto\/artinq#",
         "vocabulary_label": "Artificial Inquiries",
         "local_name": "Historique",
-        "label": "Historique"
+        "label": "Historique de conversations"
     }
 }
