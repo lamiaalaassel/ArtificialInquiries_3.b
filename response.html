@@ -81,8 +81,12 @@
   </main>
 
   <script>
-    // API Omeka S de la base commune (appel direct, sans PHP)
-    const API = "https://humanum-p8.fr/omk_artificialinquiries/api";
+    // Les appels passent par proxy.php (hébergé avec cette page sur alwaysdata),
+    // qui relaie vers l'API Omeka S de la base commune : plus de problème CORS.
+    function apiUrl(pathAndQuery) {
+      const [path, query] = pathAndQuery.split("?");
+      return "proxy.php?path=" + encodeURIComponent(path) + (query ? "&" + query : "");
+    }
 
     // type = terme du vocabulaire commun ; templateLabel = nom exact du resource template importé
     // classId et templateId sont retrouvés automatiquement à la connexion
@@ -116,7 +120,7 @@
 
     function friendlyError(error) {
       if (error instanceof TypeError) {
-        return "Impossible de joindre Omeka S (probablement le CORS : le serveur doit autoriser ce site). Voir la console (F12).";
+        return "Impossible de joindre Omeka S (vérifiez que proxy.php est bien sur le serveur). Voir la console (F12).";
       }
       return error.message;
     }
@@ -136,13 +140,13 @@
     // Retrouver les IDs de classes et de modèles dans la base commune
     async function resolveIds() {
       for (const [label, cfg] of Object.entries(resourceConfig)) {
-        const r = await fetch(`${API}/resource_classes?term=${encodeURIComponent(cfg.type)}`);
+        const r = await fetch(apiUrl(`resource_classes?term=${encodeURIComponent(cfg.type)}`));
         if (!r.ok) throw new Error("Lecture des classes impossible (HTTP " + r.status + ").");
         const data = await r.json();
         if (!data.length) throw new Error("Classe introuvable dans la base commune : " + cfg.type);
         cfg.classId = data[0]["o:id"];
       }
-      const t = await fetch(`${API}/resource_templates?per_page=200&${authQuery()}`);
+      const t = await fetch(apiUrl(`resource_templates?per_page=200&${authQuery()}`));
       if (!t.ok) throw new Error("Lecture des modèles impossible (HTTP " + t.status + "). Vérifiez vos clés.");
       const templates = await t.json();
       for (const cfg of Object.values(resourceConfig)) {
@@ -192,7 +196,7 @@
     async function loadItems() {
       const classQuery = Object.values(resourceConfig)
         .map(cfg => `resource_class_id[]=${cfg.classId}`).join("&");
-      const r = await fetch(`${API}/items?per_page=100&${classQuery}&${authQuery()}`);
+      const r = await fetch(apiUrl(`items?per_page=100&${classQuery}&${authQuery()}`));
       if (!r.ok) throw new Error("Lecture des items impossible (HTTP " + r.status + ").");
       const data = await r.json();
 
@@ -264,7 +268,7 @@
 
       try {
         const isEditing = editingId !== null;
-        const url = isEditing ? `${API}/items/${editingId}?${authQuery()}` : `${API}/items?${authQuery()}`;
+        const url = isEditing ? apiUrl(`items/${editingId}?${authQuery()}`) : apiUrl(`items?${authQuery()}`);
         const r = await fetch(url, {
           method: isEditing ? "PATCH" : "POST",
           headers: { "Content-Type": "application/json" },
@@ -297,7 +301,7 @@
     async function deleteItem(id) {
       if (!confirm("Voulez-vous vraiment supprimer cet élément ?")) return;
       try {
-        const r = await fetch(`${API}/items/${id}?${authQuery()}`, { method: "DELETE" });
+        const r = await fetch(apiUrl(`items/${id}?${authQuery()}`), { method: "DELETE" });
         if (!r.ok) throw new Error("Suppression impossible (HTTP " + r.status + ").");
         if (editingId === id) resetForm();
         alert("Ressource supprimée avec succès !");
