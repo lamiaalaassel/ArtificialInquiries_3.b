@@ -1,5 +1,5 @@
 {
-    "o:label": "ConversationMemorable",
+    "o:label": "Conversation marquante",
     "o:resource_template_property": [
         {
             "o:alternate_label": null,
@@ -11,7 +11,7 @@
             "vocabulary_namespace_uri": "https:\/\/humanum-p8.fr\/omk_artificialinquiries\/onto\/artinq#",
             "vocabulary_label": "Artificial Inquiries",
             "local_name": "titre",
-            "label": "Titre"
+            "label": "titre"
         },
         {
             "o:alternate_label": null,
@@ -22,8 +22,8 @@
             "data_types": [],
             "vocabulary_namespace_uri": "https:\/\/humanum-p8.fr\/omk_artificialinquiries\/onto\/artinq#",
             "vocabulary_label": "Artificial Inquiries",
-            "local_name": "categorie",
-            "label": "Cat\u00e9gorie"
+            "local_name": "aPourCategorie",
+            "label": "a pour cat\u00e9gorie"
         },
         {
             "o:alternate_label": null,
@@ -35,13 +35,13 @@
             "vocabulary_namespace_uri": "https:\/\/humanum-p8.fr\/omk_artificialinquiries\/onto\/artinq#",
             "vocabulary_label": "Artificial Inquiries",
             "local_name": "date",
-            "label": "Date"
+            "label": "date"
         }
     ],
     "o:resource_class": {
         "vocabulary_namespace_uri": "https:\/\/humanum-p8.fr\/omk_artificialinquiries\/onto\/artinq#",
         "vocabulary_label": "Artificial Inquiries",
-        "local_name": "ConversationMemorable",
-        "label": "Conversation m\u00e9morable"
+        "local_name": "ConversationMarquante",
+        "label": "Conversation marquante"
     }
 }
