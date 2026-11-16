@@ -6,7 +6,6 @@
   <title>Artificial Inquiries</title>
   <script>
     // Sur GitHub Pages : redirection vers la page hébergée sur alwaysdata.
-    // Sur alwaysdata : la page s'affiche normalement (pas de boucle).
     const ALWAYSDATA_URL = "https://lamiaa.alwaysdata.net/response.html";
     if (location.hostname.endsWith("github.io")) {
       location.replace(ALWAYSDATA_URL);
@@ -31,6 +30,13 @@
     .empty, .hint { color: #666; font-size: 14px; }
     #status { margin-top: 12px; font-size: 14px; }
     .ok { color: #1e7a46; } .err { color: #b3261e; }
+    .tabs { display: flex; gap: 8px; flex-wrap: wrap; margin: 15px 0; }
+    .tab { margin: 0; background: white; color: #263b5e; border: 1px solid #c8d4e6; }
+    .tab.active { background: #263b5e; color: white; }
+    .hidden { display: none !important; }
+    .bar { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; background: #eaf1ff; border-radius: 10px; padding: 12px 18px; margin-bottom: 20px; }
+    .bar button { margin: 0; }
+    .count { font-size: 28px; font-weight: bold; color: #263b5e; margin: 6px 0; }
   </style>
 </head>
 <body>
@@ -40,56 +46,120 @@
   </header>
 
   <main>
-    <section class="panel" id="connectPanel">
-      <h2>Connexion à Omeka S</h2>
-      <p class="hint">
-        Clés d'API à créer dans Omeka S : votre profil, puis « API keys ».
-        Elles restent dans votre navigateur (session) et ne sont jamais enregistrées dans le code.
-      </p>
-      <label for="keyIdentity">Identité de la clé (key_identity)</label>
-      <input type="text" id="keyIdentity" autocomplete="off">
-      <label for="keyCredential">Crédential de la clé (key_credential)</label>
-      <input type="password" id="keyCredential" autocomplete="off">
-      <button type="button" id="connectButton">Se connecter</button>
-      <button type="button" id="disconnectButton" class="cancel" hidden>Se déconnecter</button>
+
+    <!-- =====================================================
+         ÉCRAN 1 : CONNEXION
+         ===================================================== -->
+    <section class="panel" id="loginScreen">
+      <h2>Connexion</h2>
+
+      <div class="tabs" id="loginTabs">
+        <button type="button" class="tab active" data-provider="omeka">Omeka S</button>
+        <button type="button" class="tab" data-provider="google">Google</button>
+        <button type="button" class="tab" data-provider="github">GitHub</button>
+        <button type="button" class="tab" data-provider="cas">CAS Paris 8</button>
+      </div>
+
+      <!-- Onglet Omeka : clés API (lecture + écriture) -->
+      <div id="omekaPanel">
+        <p class="hint">
+          Clés d'API à créer dans Omeka S : votre profil, puis « API keys ».
+          Elles restent dans votre navigateur (session) et ne sont jamais enregistrées dans le code.
+        </p>
+        <label for="keyIdentity">Identité de la clé (key_identity)</label>
+        <input type="text" id="keyIdentity" autocomplete="off">
+        <label for="keyCredential">Crédential de la clé (key_credential)</label>
+        <input type="password" id="keyCredential" autocomplete="off">
+        <button type="button" id="connectButton">Se connecter</button>
+      </div>
+
+      <!-- Onglet Google -->
+      <div id="googlePanel" class="hidden">
+        <p class="hint">
+          Google vérifie <strong>qui vous êtes</strong>. Si votre compte est autorisé, vous pourrez ajouter, modifier et supprimer ;
+          sinon l'accès est en lecture seule.
+        </p>
+        <div id="googleButton"></div>
+      </div>
+
+      <!-- Onglets GitHub et CAS -->
+      <div id="externalPanel" class="hidden">
+        <h3 id="externalTitle"></h3>
+        <p class="hint" id="externalDescription"></p>
+        <button type="button" id="externalButton">Continuer</button>
+      </div>
+
       <p id="status" role="status"></p>
     </section>
 
-    <section class="panel">
-      <h2 id="formTitle">Ajouter un élément</h2>
-      <form id="itemForm">
-        <label for="resourceClass">Classe</label>
-        <select id="resourceClass" required></select>
+    <!-- =====================================================
+         ÉCRAN 2 : APPLICATION (visible après la connexion)
+         ===================================================== -->
+    <section id="appScreen" class="hidden">
 
-        <label for="title">Titre ou nom</label>
-        <input type="text" id="title" placeholder="Ex. : Nutrition" required>
+      <!-- Barre du haut : qui est connecté + déconnexion -->
+      <div class="bar">
+        <strong id="sessionLabel"></strong>
+        <button type="button" id="disconnectButton" class="cancel">Se déconnecter</button>
+      </div>
 
-        <label for="description">Description</label>
-        <textarea id="description" rows="3" placeholder="Décris cet élément..."></textarea>
+      <!-- Menu de navigation -->
+      <div class="tabs" id="navTabs">
+        <button type="button" class="tab active" data-page="list">Liste</button>
+        <button type="button" class="tab" data-page="add" id="addTab">Ajouter</button>
+        <button type="button" class="tab" data-page="classes">Classes</button>
+      </div>
 
-        <button type="submit" id="submitButton">Ajouter</button>
-        <button type="button" id="cancelButton" class="cancel" hidden>Annuler</button>
-      </form>
-    </section>
+      <!-- PAGE : LISTE -->
+      <section class="panel" id="listPage">
+        <h2>Liste des éléments</h2>
+        <label for="filterClass">Filtrer par classe</label>
+        <select id="filterClass"></select>
+        <div id="itemList"></div>
+      </section>
 
-    <section class="panel">
-      <h2>Liste des éléments</h2>
-      <label for="filterClass">Filtrer par classe</label>
-      <select id="filterClass"></select>
-      <div id="itemList"></div>
+      <!-- PAGE : AJOUTER / MODIFIER -->
+      <section class="panel hidden" id="addPage">
+        <h2 id="formTitle">Ajouter un élément</h2>
+        <form id="itemForm">
+          <label for="resourceClass">Classe</label>
+          <select id="resourceClass" required></select>
+
+          <label for="title">Titre ou nom</label>
+          <input type="text" id="title" placeholder="Ex. : Nutrition" required>
+
+          <label for="description">Description</label>
+          <textarea id="description" rows="3" placeholder="Décris cet élément..."></textarea>
+
+          <button type="submit" id="submitButton">Ajouter</button>
+          <button type="button" id="cancelButton" class="cancel" hidden>Annuler</button>
+        </form>
+      </section>
+
+      <!-- PAGE : CLASSES -->
+      <section class="panel hidden" id="classesPage">
+        <h2>Classes</h2>
+        <p class="hint">Nombre d'éléments par classe dans la base commune.</p>
+        <div id="classesList"></div>
+      </section>
+
     </section>
   </main>
 
   <script>
-    // Les appels passent par proxy.php (hébergé avec cette page sur alwaysdata),
-    // qui relaie vers l'API Omeka S de la base commune : plus de problème CORS.
+    // =====================================================
+    // PARTIE 1 : CONFIGURATION
+    // =====================================================
+    const GOOGLE_CLIENT_ID = "711076710849-9euc4g7b49ear9ssl7vj4gghsa668uu2.apps.googleusercontent.com";
+
+    // Serveur qui héberge les scripts GitHub / CAS (ici le même site alwaysdata)
+    const AUTH_SERVER = location.origin;
+
     function apiUrl(pathAndQuery) {
       const [path, query] = pathAndQuery.split("?");
       return "proxy.php?path=" + encodeURIComponent(path) + (query ? "&" + query : "");
     }
 
-    // type = terme du vocabulaire commun ; templateLabel = nom exact du resource template importé
-    // classId et templateId sont retrouvés automatiquement à la connexion
     const resourceConfig = {
       "Catégorie de tâche":          { type: "artinq:CategorieTache",       templateLabel: "Catégorie de tâche" },
       "Conversation":                { type: "artinq:Conversation",         templateLabel: "Conversation" },
@@ -99,9 +169,14 @@
       "Passation":                   { type: "artinq:Passation",            templateLabel: "Artificial Inquiries – Passation" }
     };
 
+    // =====================================================
+    // PARTIE 2 : VARIABLES ET RACCOURCIS
+    // =====================================================
     let items = [];
     let editingId = null;
     let connected = false;
+    let readOnly = false;
+    let selectedProvider = "omeka";
 
     const $ = id => document.getElementById(id);
     const form = $("itemForm"), resourceClass = $("resourceClass"), title = $("title"),
@@ -110,8 +185,12 @@
           statusEl = $("status"), connectButton = $("connectButton"), disconnectButton = $("disconnectButton"),
           keyIdentity = $("keyIdentity"), keyCredential = $("keyCredential");
 
-    const authQuery = () =>
-      `key_identity=${encodeURIComponent(keyIdentity.value.trim())}&key_credential=${encodeURIComponent(keyCredential.value.trim())}`;
+    // Vide en lecture seule (Google / GitHub / CAS) : aucune clé envoyée
+    const authQuery = () => {
+      const id = keyIdentity.value.trim(), cred = keyCredential.value.trim();
+      if (readOnly || !id || !cred) return "";
+      return `key_identity=${encodeURIComponent(id)}&key_credential=${encodeURIComponent(cred)}`;
+    };
 
     function setStatus(text, ok) {
       statusEl.textContent = text;
@@ -125,19 +204,45 @@
       return error.message;
     }
 
-    function setCrudEnabled(enabled) {
-      form.querySelectorAll("input, select, textarea, button").forEach(el => { el.disabled = !enabled; });
-      filterClass.disabled = !enabled;
-      itemList.querySelectorAll("button").forEach(b => { b.disabled = !enabled; });
+    // =====================================================
+    // PARTIE 3 : NAVIGATION ENTRE LES ÉCRANS ET LES PAGES
+    // =====================================================
+    function showPage(page) {
+      ["list", "add", "classes"].forEach(p => {
+        $(p + "Page").classList.toggle("hidden", p !== page);
+      });
+      document.querySelectorAll("#navTabs .tab").forEach(t => {
+        t.classList.toggle("active", t.dataset.page === page);
+      });
     }
 
+    function openApp(label) {
+      $("loginScreen").classList.add("hidden");
+      $("appScreen").classList.remove("hidden");
+      $("sessionLabel").textContent = label;
+      $("addTab").classList.toggle("hidden", readOnly);   // pas d'ajout en lecture seule
+      showPage("list");
+    }
+
+    function closeApp() {
+      $("appScreen").classList.add("hidden");
+      $("loginScreen").classList.remove("hidden");
+    }
+
+    $("navTabs").addEventListener("click", event => {
+      const b = event.target.closest("[data-page]");
+      if (b) showPage(b.dataset.page);
+    });
+
+    // =====================================================
+    // PARTIE 4 : LECTURE DES DONNÉES OMEKA S
+    // =====================================================
     function fillSelects() {
       const labels = Object.keys(resourceConfig);
       resourceClass.replaceChildren(...labels.map(l => new Option(l, l)));
       filterClass.replaceChildren(new Option("Toutes les classes", "Toutes"), ...labels.map(l => new Option(l, l)));
     }
 
-    // Retrouver les IDs de classes et de modèles dans la base commune
     async function resolveIds() {
       for (const [label, cfg] of Object.entries(resourceConfig)) {
         const r = await fetch(apiUrl(`resource_classes?term=${encodeURIComponent(cfg.type)}`));
@@ -147,40 +252,19 @@
         cfg.classId = data[0]["o:id"];
       }
       const t = await fetch(apiUrl(`resource_templates?per_page=200&${authQuery()}`));
-      if (!t.ok) throw new Error("Lecture des modèles impossible (HTTP " + t.status + "). Vérifiez vos clés.");
+      if (!t.ok) {
+        if (readOnly) return;
+        throw new Error("Lecture des modèles impossible (HTTP " + t.status + "). Vérifiez vos clés.");
+      }
       const templates = await t.json();
+      // Avec des clés valides, les modèles doivent être lisibles ; sinon les clés sont refusées
+      if (!readOnly && !templates.some(x => Object.values(resourceConfig).some(c => c.templateLabel === x["o:label"]))) {
+        throw new Error("Clés API refusées ou sans droits sur la base commune. Vérifiez key_identity et key_credential.");
+      }
       for (const cfg of Object.values(resourceConfig)) {
         const found = templates.find(x => x["o:label"] === cfg.templateLabel);
         cfg.templateId = found ? found["o:id"] : null;
       }
-    }
-
-    function displayItems() {
-      itemList.replaceChildren();
-      const selected = filterClass.value;
-      const filtered = items.filter(i => selected === "Toutes" || i.resourceClass === selected);
-
-      if (!filtered.length) {
-        const p = document.createElement("p");
-        p.className = "empty";
-        p.textContent = "Aucun élément à afficher.";
-        itemList.appendChild(p);
-        return;
-      }
-
-      filtered.forEach(item => {
-        const card = document.createElement("article");
-        card.className = "item";
-        const h = document.createElement("h3"); h.textContent = item.title;
-        const c = document.createElement("p"); c.textContent = "Classe : " + item.resourceClass;
-        const d = document.createElement("p"); d.textContent = item.displayDescription || "Aucune description.";
-        const e = document.createElement("button"); e.className = "edit"; e.textContent = "Modifier";
-        e.addEventListener("click", () => editItem(item.id));
-        const x = document.createElement("button"); x.className = "delete"; x.textContent = "Supprimer";
-        x.addEventListener("click", () => deleteItem(item.id));
-        card.append(h, c, d, e, x);
-        itemList.appendChild(card);
-      });
     }
 
     function getResourceDetails(item) {
@@ -213,46 +297,68 @@
         };
       }).filter(i => i.resourceClass !== null);
       displayItems();
+      displayClasses();
     }
 
-    async function connect() {
-      if (!keyIdentity.value.trim() || !keyCredential.value.trim()) {
-        setStatus("Renseignez la clé d'API (identité et crédential).", false);
+    // =====================================================
+    // PARTIE 5 : PAGE « LISTE »
+    // =====================================================
+    function displayItems() {
+      itemList.replaceChildren();
+      const selected = filterClass.value;
+      const filtered = items.filter(i => selected === "Toutes" || i.resourceClass === selected);
+
+      if (!filtered.length) {
+        const p = document.createElement("p");
+        p.className = "empty";
+        p.textContent = "Aucun élément à afficher.";
+        itemList.appendChild(p);
         return;
       }
-      setStatus("Connexion en cours...");
-      try {
-        await resolveIds();
-        await loadItems();
-        sessionStorage.setItem("omekaKeyIdentity", keyIdentity.value.trim());
-        sessionStorage.setItem("omekaKeyCredential", keyCredential.value.trim());
-        connected = true;
-        connectButton.hidden = true;
-        disconnectButton.hidden = false;
-        keyIdentity.disabled = keyCredential.disabled = true;
-        setStatus("Connecté à la base commune.", true);
-        setCrudEnabled(true);
-      } catch (error) {
-        console.error(error);
-        setStatus(friendlyError(error), false);
-      }
+
+      filtered.forEach(item => {
+        const card = document.createElement("article");
+        card.className = "item";
+        const h = document.createElement("h3"); h.textContent = item.title;
+        const c = document.createElement("p"); c.textContent = "Classe : " + item.resourceClass;
+        const d = document.createElement("p"); d.textContent = item.displayDescription || "Aucune description.";
+        card.append(h, c, d);
+        if (!readOnly) {
+          const e = document.createElement("button"); e.className = "edit"; e.textContent = "Modifier";
+          e.addEventListener("click", () => editItem(item.id));
+          const x = document.createElement("button"); x.className = "delete"; x.textContent = "Supprimer";
+          x.addEventListener("click", () => deleteItem(item.id));
+          card.append(e, x);
+        }
+        itemList.appendChild(card);
+      });
     }
 
-    function disconnect() {
-      sessionStorage.clear();
-      connected = false;
-      keyIdentity.value = keyCredential.value = "";
-      keyIdentity.disabled = keyCredential.disabled = false;
-      connectButton.hidden = false;
-      disconnectButton.hidden = true;
-      items = [];
-      itemList.textContent = "Connectez-vous pour afficher les ressources.";
-      setCrudEnabled(false);
-      setStatus("Déconnecté.");
+    // =====================================================
+    // PARTIE 6 : PAGE « CLASSES »
+    // =====================================================
+    function displayClasses() {
+      const box = $("classesList");
+      box.replaceChildren();
+      Object.keys(resourceConfig).forEach(label => {
+        const n = items.filter(i => i.resourceClass === label).length;
+        const card = document.createElement("article");
+        card.className = "item";
+        const h = document.createElement("h3"); h.textContent = label;
+        const c = document.createElement("p"); c.className = "count"; c.textContent = n + (n > 1 ? " éléments" : " élément");
+        const b = document.createElement("button"); b.textContent = "Voir la liste";
+        b.addEventListener("click", () => { filterClass.value = label; displayItems(); showPage("list"); });
+        card.append(h, c, b);
+        box.appendChild(card);
+      });
     }
 
+    // =====================================================
+    // PARTIE 7 : PAGE « AJOUTER / MODIFIER / SUPPRIMER »
+    // =====================================================
     form.addEventListener("submit", async event => {
       event.preventDefault();
+      if (readOnly) return;
       const cfg = resourceConfig[resourceClass.value];
       const itemTitle = title.value.trim();
       const itemDescription = description.value.trim();
@@ -275,10 +381,12 @@
           body: JSON.stringify(body)
         });
         const result = await r.json().catch(() => ({}));
+        if (r.status === 403) throw new Error("Omeka refuse cette action. Soit vos clés API sont incorrectes (retapez-les : 32 caractères, sans espace ni *), soit votre compte n'a pas le droit " + (isEditing ? "de modifier cet élément." : "d'ajouter des éléments."));
         if (!r.ok) throw new Error(JSON.stringify(result.errors || result));
         alert(isEditing ? "Ressource modifiée avec succès !" : "Ressource ajoutée avec succès !");
         resetForm();
         await loadItems();
+        showPage("list");
       } catch (error) {
         console.error(error);
         alert("Erreur : " + friendlyError(error));
@@ -295,13 +403,15 @@
       formTitle.textContent = "Modifier un élément";
       submitButton.textContent = "Enregistrer";
       cancelButton.hidden = false;
-      form.scrollIntoView({ behavior: "smooth" });
+      showPage("add");
     }
 
     async function deleteItem(id) {
+      if (readOnly) return;
       if (!confirm("Voulez-vous vraiment supprimer cet élément ?")) return;
       try {
         const r = await fetch(apiUrl(`items/${id}?${authQuery()}`), { method: "DELETE" });
+        if (r.status === 403) throw new Error("Omeka refuse la suppression. Vérifiez vos clés API (32 caractères, sans espace ni *) ou vos droits sur cet élément.");
         if (!r.ok) throw new Error("Suppression impossible (HTTP " + r.status + ").");
         if (editingId === id) resetForm();
         alert("Ressource supprimée avec succès !");
@@ -320,22 +430,171 @@
       cancelButton.hidden = true;
     }
 
+    // =====================================================
+    // PARTIE 8 : CONNEXION / DÉCONNEXION
+    // =====================================================
+    // Connexion commune : avec clés (écriture) ou sans clés (lecture seule)
+    async function startSession(label, asReadOnly) {
+      readOnly = asReadOnly;
+      setStatus("Connexion en cours...");
+      try {
+        await resolveIds();
+        connected = true;
+        await loadItems();
+        setStatus("");
+        openApp(label);
+      } catch (error) {
+        connected = false;
+        console.error(error);
+        setStatus(friendlyError(error), false);
+      }
+    }
+
+    function connect() {
+      if (!keyIdentity.value.trim() || !keyCredential.value.trim()) {
+        setStatus("Renseignez la clé d'API (identité et crédential).", false);
+        return;
+      }
+      const lid = keyIdentity.value.trim().length, lcr = keyCredential.value.trim().length;
+      if (lid !== 32 || lcr !== 32) {
+        const ok = confirm(
+          "Les clés Omeka S font normalement 32 caractères.\n" +
+          "Votre identité en a " + lid + " et votre crédential en a " + lcr + ".\n" +
+          "Un caractère en trop (espace, *) rend la clé invalide.\n\nContinuer quand même ?"
+        );
+        if (!ok) return;
+      }
+      return startSession("Omeka S — lecture et écriture", false);
+    }
+
+    function disconnect() {
+      fetch(new URL("/auth/logout.php", AUTH_SERVER).href, { credentials: "include" }).catch(() => {});
+      sessionStorage.clear();
+      if (window.google?.accounts?.id) google.accounts.id.disableAutoSelect();
+      connected = false;
+      readOnly = false;
+      keyIdentity.value = keyCredential.value = "";
+      items = [];
+      resetForm();
+      itemList.replaceChildren();
+      closeApp();
+      setStatus("Déconnecté.");
+    }
+
     connectButton.addEventListener("click", connect);
     disconnectButton.addEventListener("click", disconnect);
-    cancelButton.addEventListener("click", resetForm);
+    cancelButton.addEventListener("click", () => { resetForm(); showPage("list"); });
     filterClass.addEventListener("change", displayItems);
 
-    fillSelects();
-    setCrudEnabled(false);
-    itemList.textContent = "Connectez-vous pour afficher les ressources.";
+    // =====================================================
+    // PARTIE 9 : ONGLETS DE CONNEXION (Omeka / Google / GitHub / CAS)
+    // =====================================================
+    const providers = {
+      github: { title: "Connexion GitHub", description: "Une fenêtre s'ouvrira vers GitHub. Écriture possible si votre compte est autorisé.", route: "/auth/github_login.php" },
+      cas:    { title: "Connexion CAS Paris 8", description: "Vous serez redirigé vers la connexion universitaire Paris 8. Écriture possible si votre compte est autorisé.", route: "/auth/cas_login.php" }
+    };
 
-    // Reconnexion automatique si la session contient déjà les clés
-    const savedId = sessionStorage.getItem("omekaKeyIdentity");
-    const savedCred = sessionStorage.getItem("omekaKeyCredential");
-    if (savedId && savedCred) {
-      keyIdentity.value = savedId;
-      keyCredential.value = savedCred;
-      connect();
+    $("loginTabs").addEventListener("click", event => {
+      const button = event.target.closest("[data-provider]");
+      if (!button) return;
+      selectedProvider = button.dataset.provider;
+      if (!connected) setStatus("");
+      document.querySelectorAll("#loginTabs .tab").forEach(t => t.classList.toggle("active", t === button));
+      $("omekaPanel").classList.toggle("hidden", selectedProvider !== "omeka");
+      $("googlePanel").classList.toggle("hidden", selectedProvider !== "google");
+      $("externalPanel").classList.toggle("hidden", !providers[selectedProvider]);
+      if (providers[selectedProvider]) {
+        $("externalTitle").textContent = providers[selectedProvider].title;
+        $("externalDescription").textContent = providers[selectedProvider].description;
+      }
+      if (selectedProvider === "google") initGoogle();
+    });
+
+    // GitHub / CAS : ouverture dans une pop-up
+    $("externalButton").addEventListener("click", () => {
+      const p = providers[selectedProvider];
+      if (!p) return;
+      const url = new URL(p.route, AUTH_SERVER).href;
+      const w = 600, h = 700;
+      const left = Math.max(0, (screen.width - w) / 2), top = Math.max(0, (screen.height - h) / 2);
+      const popup = window.open(url, "auth_popup", `width=${w},height=${h},left=${left},top=${top}`);
+      if (!popup) window.location.assign(url);
+    });
+
+    // La pop-up prévient la page quand la connexion a réussi
+    window.addEventListener("message", event => {
+      if (event.origin !== AUTH_SERVER) return;
+      if (event.data?.type === "auth-success") checkServerSession();
+    });
+
+    // ---------- Google (Google Identity Services) ----------
+    let googleLoaded = false;
+    function initGoogle() {
+      if (GOOGLE_CLIENT_ID.startsWith("COLLEZ")) {
+        setStatus("Configurez GOOGLE_CLIENT_ID dans le code (ID client Google).", false);
+        return;
+      }
+      const render = () => {
+        google.accounts.id.initialize({ client_id: GOOGLE_CLIENT_ID, callback: onGoogleCredential });
+        google.accounts.id.renderButton($("googleButton"), { theme: "outline", size: "large", text: "signin_with" });
+      };
+      if (googleLoaded) { render(); return; }
+      const s = document.createElement("script");
+      s.src = "https://accounts.google.com/gsi/client";
+      s.async = true;
+      s.onload = () => { googleLoaded = true; render(); };
+      s.onerror = () => setStatus("Impossible de charger Google (bloqueur de publicités ?).", false);
+      document.head.appendChild(s);
+    }
+
+    async function onGoogleCredential(response) {
+      try {
+        setStatus("Vérification Google en cours...");
+        const r = await fetch(new URL("/auth/google_login.php", AUTH_SERVER).href, {
+          method: "POST",
+          credentials: "include",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ credential: response.credential })
+        });
+        const data = await r.json().catch(() => ({}));
+        if (!r.ok) throw new Error(data.error || "Google refusé (HTTP " + r.status + ")");
+        const ok = await checkServerSession();
+        if (!ok) setStatus("Session introuvable après la connexion Google.", false);
+      } catch (e) {
+        console.error(e);
+        setStatus("Connexion Google impossible : " + e.message, false);
+      }
+    }
+
+    // ---------- Retour de GitHub / CAS : session côté serveur ----------
+    async function checkServerSession() {
+      try {
+        const r = await fetch(new URL("/auth/session.php", AUTH_SERVER).href, { credentials: "include" });
+        if (!r.ok) return false;
+        const s = await r.json();
+        if (!s.authenticated) return false;
+        const who = s.user?.login || s.user?.email || s.user?.name || "utilisateur";
+        const canWrite = s.can_write === true;
+        await startSession(`${s.user?.provider || "Session"} : ${who} — ` + (canWrite ? "lecture et écriture" : "lecture seule"), !canWrite);
+        return true;
+      } catch (e) {
+        console.error("Session serveur :", e);
+        return false;
+      }
+    }
+
+    // =====================================================
+    // PARTIE 10 : DÉMARRAGE
+    // =====================================================
+    fillSelects();
+
+    // Aucune connexion automatique : l'écran de connexion s'affiche toujours en premier.
+    sessionStorage.clear();
+
+    // Seul cas : retour de GitHub / CAS par redirection (si la pop-up a été bloquée)
+    if (new URLSearchParams(location.search).get("auth") === "ok") {
+      history.replaceState(null, "", location.pathname);
+      checkServerSession();
     }
   </script>
 </body>
